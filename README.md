@@ -70,6 +70,8 @@ mamba env create -f environment.macos.yml
 mamba activate tactile_ssl
 ```
 
+The environment files pin `rerun-sdk==0.20.3`, which is the newest Rerun release in this setup that still stays compatible with the repo's NumPy 1.x / Lightning stack.
+
 If you want to run the DIGIT live demo on macOS, install the macOS-capable `digit-interface` fork as an editable dependency. If your fork sits next to this repository, the install command is:
 ```bash
 pip install -e ../digit-interface

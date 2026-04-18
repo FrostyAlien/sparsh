@@ -4,6 +4,9 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import deque
+import os
+import shutil
+import sys
 from typing import Optional, Tuple
 
 import cv2
@@ -41,22 +44,54 @@ class DemoEncoderRerun(TestTaskSL):
         gelsight_device_id: Optional[int],
         device,
         module: algorithm.Module,
+        digit_device_id: Optional[int] = None,
         n_warmup_frames: int = 60,
         query_patch: Tuple[int, int] = (7, 7),
         refit_every: int = 0,
+        rerun_port: int = 9876,
     ):
         super().__init__(device=device, module=module)
         self.digit_serial = digit_serial
         self.gelsight_device_id = gelsight_device_id
+        self.digit_device_id = digit_device_id
         self.n_warmup_frames = n_warmup_frames
         self.query_patch = tuple(query_patch)
         self.refit_every = refit_every
+        self.rerun_port = rerun_port
+
+    def _prefer_env_rerun_viewer(self) -> Optional[str]:
+        current = shutil.which("rerun")
+        candidate_dirs = []
+
+        conda_prefix = os.environ.get("CONDA_PREFIX")
+        if conda_prefix:
+            candidate_dirs.append(os.path.join(conda_prefix, "bin"))
+
+        python_bin = os.path.dirname(sys.executable)
+        if python_bin not in candidate_dirs:
+            candidate_dirs.append(python_bin)
+
+        for candidate_dir in candidate_dirs:
+            candidate = os.path.join(candidate_dir, "rerun")
+            if not (os.path.isfile(candidate) and os.access(candidate, os.X_OK)):
+                continue
+            if current != candidate:
+                os.environ["PATH"] = candidate_dir + os.pathsep + os.environ.get("PATH", "")
+                print(f"[DemoEncoderRerun] preferring Rerun viewer at {candidate}")
+            return candidate
+
+        if current is not None:
+            print(f"[DemoEncoderRerun] using Rerun viewer at {current}")
+        else:
+            print("[DemoEncoderRerun] no Rerun viewer found on PATH")
+        return current
 
     def init(self):
         self.sensor_handler = DemoForceFieldData(
             config=self.config.data.dataset.config,
             digit_serial=self.digit_serial,
             gelsight_device_id=self.gelsight_device_id,
+            digit_device_id=self.digit_device_id,
         )
 
         encoder = self.module.model_encoder
@@ -71,7 +106,9 @@ class DemoEncoderRerun(TestTaskSL):
         self._pca: Optional[PCA] = None
         self._frame_idx = 0
 
-        rr.init("sparsh_encoder", spawn=True)
+        self._prefer_env_rerun_viewer()
+        rr.init("sparsh_encoder")
+        rr.spawn(port=self.rerun_port)
         rr.log(
             "world/tactile",
             rr.TextDocument(
@@ -154,7 +191,7 @@ class DemoEncoderRerun(TestTaskSL):
             rr.Points2D(query_xy, colors=[(255, 0, 0)], radii=[4.0]),
         )
 
-        rr.log("plots/feat_norm", rr.Scalars(float(feats.norm(dim=-1).mean().item())))
+        rr.log("plots/feat_norm", rr.Scalar(float(feats.norm(dim=-1).mean().item())))
 
         if self._pca is None:
             return
@@ -163,7 +200,7 @@ class DemoEncoderRerun(TestTaskSL):
 
         sim_rgb, sim_max = self._similarity_map(feats)
         rr.log("world/tactile/sim", rr.Image(sim_rgb))
-        rr.log("plots/sim_max", rr.Scalars(sim_max))
+        rr.log("plots/sim_max", rr.Scalar(sim_max))
 
         attn_map = self._compute_attention_map()
         rr.log("world/tactile/attention", rr.Image(self._attention_rgb(attn_map)))
