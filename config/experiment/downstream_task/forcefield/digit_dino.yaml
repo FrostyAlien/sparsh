@@ -64,7 +64,8 @@ test:
   demo:
     _partial_: True
     _target_: tactile_ssl.test.DemoForceField
-    digit_serial: "D20510"
+    digit_serial: ~
+    digit_device_id: ~
     gelsight_device_id: ~
   path_outputs: ~
 

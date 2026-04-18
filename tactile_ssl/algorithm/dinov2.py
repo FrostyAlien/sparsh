@@ -7,6 +7,7 @@ import copy
 import math
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+import warnings
 
 import einops
 import torch
@@ -23,9 +24,31 @@ from tactile_ssl.utils.ema import update_moving_average
 from tactile_ssl.utils.logging import get_pylogger, img_logger
 from tactile_ssl.utils import patchify_image, patches_to_image
 
-from xformers.ops import fmha
+try:
+    from xformers.ops import fmha
+
+    XFORMERS_AVAILABLE = True
+except ImportError:
+    fmha = None
+    XFORMERS_AVAILABLE = False
+    warnings.warn("xFormers is not available (DINOv2); using the unfused head path.")
 
 log = get_pylogger(__name__)
+
+
+def _apply_dino_head(
+    head: nn.Module,
+    student_global_cls_tokens: torch.Tensor,
+    student_local_cls_tokens: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    if XFORMERS_AVAILABLE:
+        attn_bias, cat_inputs = fmha.BlockDiagonalMask.from_tensor_list(
+            [student_global_cls_tokens, student_local_cls_tokens]
+        )
+        after_head_list = attn_bias.split(head(cat_inputs))
+        return after_head_list[0].squeeze(0), after_head_list[1].squeeze(0)
+
+    return head(student_global_cls_tokens), head(student_local_cls_tokens)
 
 
 class DINOv2Module(Module, nn.Module):
@@ -373,9 +396,11 @@ class DINOv2Module(Module, nn.Module):
         student_global_patch_tokens = student_global_dict["x_norm_patchtokens"]
 
 
-        _attn_bias, cat_inputs = fmha.BlockDiagonalMask.from_tensor_list([student_global_cls_tokens, student_local_cls_tokens])
-        after_head_list = _attn_bias.split(self.student_encoder_dict['dino_head'](cat_inputs))
-        student_global_cls_tokens_after_head, student_local_cls_tokens_after_head = after_head_list[0].squeeze(0), after_head_list[1].squeeze(0)
+        student_global_cls_tokens_after_head, student_local_cls_tokens_after_head = _apply_dino_head(
+            self.student_encoder_dict["dino_head"],
+            student_global_cls_tokens,
+            student_local_cls_tokens,
+        )
         student_cls_tokens_after_head = torch.cat([student_global_cls_tokens_after_head, student_local_cls_tokens_after_head], dim=1)
         student_cls_tokens_after_head = einops.rearrange(student_cls_tokens_after_head, 'b p c -> p b 1 c')
 

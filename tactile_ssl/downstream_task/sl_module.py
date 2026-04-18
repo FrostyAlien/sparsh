@@ -50,9 +50,18 @@ class SLModule(Module, nn.Module):
         self.scheduler_partial = scheduler_cfg
         self.optim_partial = optim_cfg
 
+    @staticmethod
+    def _load_checkpoint(path: str):
+        # Public checkpoints may be saved from CUDA training runs. 
+        # If CUDA is not available, we need to map the storage to CPU for loading on MPS or CPU-only machines.
+        if not torch.cuda.is_available():
+            return torch.load(path, map_location=torch.device("cpu"))
+        else:
+            return torch.load(path)
+
     def load_task(self, checkpoint_task: str):
         try:
-            state_dict = torch.load(checkpoint_task)
+            state_dict = self._load_checkpoint(checkpoint_task)
             # check if there are keys starting with "model_encoder."
             if any([key.startswith("model_encoder.") for key in state_dict.keys()]):
                 log.info("Found encoder in task checkpoint. Loading encoder and decoder from task checkpoint.")
@@ -70,7 +79,7 @@ class SLModule(Module, nn.Module):
             try:
                 state_dict_light = {
                     key.replace("model_encoder.", ""): value
-                    for key, value in torch.load(checkpoint_task).items()
+                    for key, value in self._load_checkpoint(checkpoint_task).items()
                     if key.startswith("model_encoder.")
                 }
                 self.model_encoder.load_state_dict(state_dict_light, strict=False)
@@ -80,7 +89,7 @@ class SLModule(Module, nn.Module):
 
     def load_encoder(self, checkpoint_encoder: str):
         log.info(f"Loading encoder from {checkpoint_encoder}")
-        checkpoint = torch.load(checkpoint_encoder)
+        checkpoint = self._load_checkpoint(checkpoint_encoder)
         if "jepa" in self.encoder_type:
             encoder_key = "target_encoder"
         elif "dino" in self.encoder_type:

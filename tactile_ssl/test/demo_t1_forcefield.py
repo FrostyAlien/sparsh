@@ -29,6 +29,7 @@ class DemoForceField(TestTaskSL):
         gelsight_device_id: Optional[int],
         device,
         module: algorithm.Module,
+        digit_device_id: Optional[int] = None,
     ):
         super().__init__(
             device=device,
@@ -36,6 +37,7 @@ class DemoForceField(TestTaskSL):
         )
         self.digit_serial = digit_serial
         self.gelsight_device_id = gelsight_device_id
+        self.digit_device_id = digit_device_id
     
     def init(self):
         self.sensor = self.config.sensor
@@ -45,6 +47,7 @@ class DemoForceField(TestTaskSL):
             config=self.config.data.dataset.config,
             digit_serial=self.digit_serial,
             gelsight_device_id=self.gelsight_device_id,
+            digit_device_id=self.digit_device_id,
         )
         self.img_buffer = deque(maxlen=5)
         self._set_bg_template()

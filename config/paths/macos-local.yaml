@@ -1,0 +1,7 @@
+data_root: /Users/richardxiao/VSC_Project/sparsh/artifacts/data
+encoder_checkpoint_root: /Users/richardxiao/VSC_Project/sparsh/artifacts/encoders
+log_dir: /Users/richardxiao/VSC_Project/sparsh/artifacts/logs
+tacbench_dir: /Users/richardxiao/VSC_Project/sparsh/artifacts/tacbench
+
+output_dir: /Users/richardxiao/VSC_Project/sparsh/artifacts/demo
+work_dir: ${hydra:runtime.cwd}
