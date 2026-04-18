@@ -26,6 +26,7 @@ from tactile_ssl.downstream_task.utils_forcefield.ssl_utils import (
     digit_intrinsics,
 )
 from tactile_ssl.model import VIT_EMBED_DIMS
+from tactile_ssl.utils import get_best_available_device
 
 log = get_pylogger(__name__)
 
@@ -121,7 +122,7 @@ class ForceFieldModule(SLModule):
         self.with_mask_supervision = ssl_config["loss"]["with_mask_supervision"]
         self.frame_ids = [0, -1]
         img_sz = ssl_config["img_sz"]
-        self.device = torch.device("cuda")
+        self.device = get_best_available_device()
         self.pose_estimator = PoseEstimator(
             num_encoder_layers=ssl_config["pose_estimator"]["num_encoder_layers"],
             frame_ids=self.frame_ids,

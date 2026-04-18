@@ -22,6 +22,19 @@ def get_local_rank() -> int:
     return local_rank
 
 
+def get_best_available_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def configure_torch_backends(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
+
+
 def apply_masks(x, masks, concat=True):
     """
     :param x: tensor of shape [B (batch-size), N (num-patches), D (feature-dim)]

@@ -4,7 +4,9 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import deque
+import platform
 import time
+import warnings
 import cv2
 from omegaconf import DictConfig
 import numpy as np
@@ -18,7 +20,18 @@ from tactile_ssl.data.digit.utils import (
     get_resize_transform,
 )
 
-from digit_interface.digit import Digit
+try:
+    from digit_interface import Digit, DigitHandler, DigitUnsupportedFeatureError
+except ImportError:
+    try:
+        from digit_interface.digit import Digit, DigitUnsupportedFeatureError
+        from digit_interface.digit_handler import DigitHandler
+    except ImportError:
+        Digit = None
+        DigitHandler = None
+
+        class DigitUnsupportedFeatureError(RuntimeError):
+            pass
 
 
 class DemoForceFieldData:
@@ -27,6 +40,7 @@ class DemoForceFieldData:
         config: DictConfig,
         digit_serial: str,
         gelsight_device_id: int,
+        digit_device_id: int = None,
     ):
 
         super().__init__()
@@ -34,6 +48,7 @@ class DemoForceFieldData:
         self.sensor = self.config.sensor
         self.digit_serial = digit_serial
         self.gelsight_device_id = gelsight_device_id
+        self.digit_device_id = digit_device_id
         self.enhance_diff_img = True if self.sensor == "gelsight_mini" else False
 
         self.remove_bg = (
@@ -89,19 +104,64 @@ class DemoForceFieldData:
             time.sleep(1 / self.fps)
 
     def connect_digit(self):
-        # Connect to a Digit device with serial number with friendly name
-        assert self.digit_serial is not None, ValueError("Digit serial number is required")
-        digit_sensor = Digit(self.digit_serial, "Digit")
+        if Digit is None:
+            raise ImportError(
+                "digit-interface is required for DIGIT demos. Install the package "
+                "or your local fork before using sensor=digit."
+            )
+
+        digit_sensor = self._create_digit_sensor()
         digit_sensor.connect()
-        digit_sensor.set_intensity(Digit.LIGHTING_MAX)
-        # Change DIGIT resolution to QVGA
-        qvga_res = Digit.STREAMS["QVGA"]
-        digit_sensor.set_resolution(qvga_res)
-        fps_30 = Digit.STREAMS["QVGA"]["fps"]["30fps"]
-        digit_sensor.set_fps(fps_30)
+        self._configure_digit_sensor(digit_sensor)
         # Print device info
         print(digit_sensor.info())
         return digit_sensor
+
+    def _create_digit_sensor(self):
+        if self.digit_device_id is not None:
+            return Digit.from_camera_index(self.digit_device_id, "Digit")
+
+        if platform.system() != "Darwin":
+            assert self.digit_serial is not None, ValueError("Digit serial number is required")
+            return Digit(self.digit_serial, "Digit")
+
+        assert DigitHandler is not None, ValueError("DigitHandler is required on macOS")
+        digits = DigitHandler.list_digits()
+        if self.digit_serial is not None:
+            matched = [digit for digit in digits if digit.get("serial") == self.digit_serial]
+            if matched:
+                digits = matched
+            else:
+                warnings.warn(
+                    "DIGIT serial lookup is unavailable on the macOS camera backend. "
+                    "Falling back to readable camera discovery."
+                )
+        if not digits:
+            raise RuntimeError(
+                "No readable DIGIT camera devices were found. Check macOS camera permissions "
+                "or pass digit_device_id explicitly."
+            )
+        if len(digits) > 1:
+            raise ValueError(
+                "Multiple readable camera devices were found. Pass digit_device_id "
+                "to select the DIGIT camera explicitly."
+            )
+        camera_index = digits[0].get("camera_index")
+        if camera_index is None:
+            raise RuntimeError("DIGIT discovery did not return a camera index on macOS.")
+        return Digit.from_camera_index(camera_index, "Digit")
+
+    def _configure_digit_sensor(self, digit_sensor):
+        actions = [
+            ("LED intensity", lambda: digit_sensor.set_intensity(Digit.LIGHTING_MAX)),
+            ("resolution", lambda: digit_sensor.set_resolution(Digit.STREAMS["QVGA"])),
+            ("FPS", lambda: digit_sensor.set_fps(Digit.STREAMS["QVGA"]["fps"]["30fps"])),
+        ]
+        for label, action in actions:
+            try:
+                action()
+            except DigitUnsupportedFeatureError as exc:
+                warnings.warn(f"Skipping DIGIT {label} configuration: {exc}")
 
     def _init_digit_sensor(self):
         for i in range(100):

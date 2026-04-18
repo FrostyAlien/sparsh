@@ -56,11 +56,28 @@ Clone this repository:
 git clone https://github.com/facebookresearch/sparsh.git
 cd sparsh
 ```
-and create a conda environment with dependencies:
+and create a conda environment with dependencies.
+
+For Linux with CUDA:
 ```bash
 mamba env create -f environment.yml
 mamba activate tactile_ssl
 ```
+
+For macOS:
+```bash
+mamba env create -f environment.macos.yml
+mamba activate tactile_ssl
+```
+
+If you want to run the DIGIT live demo on macOS, install the macOS-capable `digit-interface` fork as an editable dependency. If your fork sits next to this repository, the install command is:
+```bash
+pip install -e ../digit-interface
+```
+
+On macOS, make sure the terminal or IDE process running the demo has Camera permission.
+
+The macOS environment intentionally omits `xformers`. The repo falls back where possible, but some transformer-heavy paths may still be slower than on Linux/CUDA.
 
 ## 🚀 Pretrained models
 
@@ -310,20 +327,25 @@ For testing Sparsh(DINO) + force field decoder live, you only need one DIGIT or 
 1. Create a folder for downloading the task checkpoints. For example, `${YOUR_PATH}/outputs_sparsh/checkpoints`.
 <!-- UPDATE THIS -->
 2. Download the decoder checkpoints from Hugging Face for [DIGIT](https://huggingface.co/facebook/sparsh-digit-forcefield-decoder) and [GelSight Mini](https://huggingface.co/facebook/sparsh-gelsight-forcefield-decoder).
-3. Connect the sensor to your PC. In case of DIGIT, please make sure you have [digit-interface](https://github.com/facebookresearch/digit-interface) installed.
+3. Connect the sensor to your PC. In case of DIGIT, please make sure you have [digit-interface](https://github.com/facebookresearch/digit-interface) installed. On macOS, use the local fork that exposes the DIGIT through the camera backend.
 4. Make sure the device is recognized by the OS (you can use Cheese in Linux to see the video that the sensor is streaming).
 
 5. Running the demo for DIGIT:
 
 ```bash
-python demo_forcefield.py +experiment=downstream_task/forcefield/digit_dino paths=${YOUR_PATH_CONFIG} paths.output_dir=${YOUR_PATH}/outputs_sparsh/checkpoints/ test.demo.digit_serial=${YOUR_DIGIT_SERIAL}`
+python demo_forcefield.py +experiment=downstream_task/forcefield/digit_dino paths=${YOUR_PATH_CONFIG} paths.output_dir=${YOUR_PATH}/outputs_sparsh/checkpoints/ test.demo.digit_serial=${YOUR_DIGIT_SERIAL}
 ```
 The DIGIT serial number is printed on the back of the sensor and has the format `DXXXXX`.
+
+On macOS, the DIGIT backend may not expose reliable serial-number lookup. If the demo does not auto-select the correct device, pass the camera index from your local `digit-interface` fork instead:
+```bash
+python demo_forcefield.py +experiment=downstream_task/forcefield/digit_dino paths=${YOUR_PATH_CONFIG} paths.output_dir=${YOUR_PATH}/outputs_sparsh/checkpoints/ test.demo.digit_device_id=${YOUR_CAMERA_INDEX}
+```
 
 6. Running the demo for GelSight Mini:
 
 ```bash
-python demo_forcefield.py +experiment=downstream_task/forcefield/gelsight_dino paths=${YOUR_PATH_CONFIG} paths.output_dir=${YOUR_PATH}/outputs_sparsh/checkpoints/ test.demo.gelsight_device_id=${YOUR_GELSIGHT_VIDEO_ID}`
+python demo_forcefield.py +experiment=downstream_task/forcefield/gelsight_dino paths=${YOUR_PATH_CONFIG} paths.output_dir=${YOUR_PATH}/outputs_sparsh/checkpoints/ test.demo.gelsight_device_id=${YOUR_GELSIGHT_VIDEO_ID}
 ```
 
 The GelSight Mini is recognized as a webcam. You can get the video ID by checking in a terminal `ls -l /dev/video*`.

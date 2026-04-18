@@ -138,3 +138,4 @@ slurm/*
 slurm/*
 outputs/*
 checkpoints/*
+artifacts/*
