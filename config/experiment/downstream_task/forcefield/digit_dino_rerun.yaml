@@ -1,0 +1,14 @@
+# @package _global_
+defaults:
+  - digit_dino
+  - _self_
+
+test:
+  demo:
+    _partial_: True
+    _target_: tactile_ssl.test.DemoEncoderRerun
+    digit_serial: "D20510"
+    gelsight_device_id: ~
+    n_warmup_frames: 60
+    query_patch: [7, 7]
+    refit_every: 0

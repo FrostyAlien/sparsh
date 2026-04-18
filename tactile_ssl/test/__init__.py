@@ -3,6 +3,7 @@
 # This source code is licensed under the CC-BY-NC 4.0 license found in the
 # LICENSE file in the root directory of this source tree.
 
+<<<<<<< Updated upstream
 from importlib import import_module
 
 _EXPORTS = {
@@ -12,6 +13,7 @@ _EXPORTS = {
     "TestGraspSL": (".test_t4_grasp", "TestGraspSL"),
     "TestTextileSL": (".test_t6_textile", "TestTextileSL"),
     "DemoForceField": (".demo_t1_forcefield", "DemoForceField"),
+    "DemoEncoderRerun": (".demo_encoder_rerun", "DemoEncoderRerun"),
 }
 
 __all__ = list(_EXPORTS)
