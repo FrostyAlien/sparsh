@@ -52,9 +52,12 @@ class SLModule(Module, nn.Module):
 
     @staticmethod
     def _load_checkpoint(path: str):
-        # Public checkpoints may be saved from CUDA training runs. Always deserialize on CPU
-        # first so macOS/CPU environments can load them before the module is moved to device.
-        return torch.load(path, map_location=torch.device("cpu"))
+        # Public checkpoints may be saved from CUDA training runs. 
+        # If CUDA is not available, we need to map the storage to CPU for loading on MPS or CPU-only machines.
+        if not torch.cuda.is_available():
+            return torch.load(path, map_location=torch.device("cpu"))
+        else:
+            return torch.load(path)
 
     def load_task(self, checkpoint_task: str):
         try:
