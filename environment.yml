@@ -1,17 +1,9 @@
 # Linux/CUDA environment. For macOS, use environment.macos.yml instead.
 name: tactile_ssl
 channels: 
- - pytorch
- - xformers
- - nvidia
  - conda-forge 
 dependencies:
- - python=3.9
- - pytorch=2.0.*
- - pytorch-cuda=11.8
- - torchvision
- - lightning=2.0.*
- - xformers
+ - python=3.10
  - hydra-core
  - hydra-colorlog
  - wandb
@@ -23,9 +15,20 @@ dependencies:
  - opencv
  - h5py
  - rich
+ - seaborn
  - pip
  - pip:
+    - --index-url https://download.pytorch.org/whl/cu128
+    - --extra-index-url https://pypi.org/simple
+    - setuptools<81
+    - torch==2.10.0
+    - torchvision==0.25.0
+    - torchaudio==2.10.0
+    - xformers==0.0.34
+    - lightning==2.0.*
+    - digit-interface
     - rootutils
     - pre-commit
     - ikpy
     - gdown==5.1.0
+    - rerun-sdk>=0.20

@@ -1,0 +1,7 @@
+data_root: ${paths.work_dir}/data
+encoder_checkpoint_root: ${paths.work_dir}/outputs_sparsh/checkpoints
+log_dir: ${paths.work_dir}/outputs_sparsh/logs
+tacbench_dir: ${paths.work_dir}/tacbench
+
+output_dir: ${paths.work_dir}/outputs_sparsh/checkpoints
+work_dir: ${hydra:runtime.cwd}

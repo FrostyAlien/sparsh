@@ -3,7 +3,7 @@ channels:
  - pytorch
  - conda-forge
 dependencies:
- - python=3.9
+ - python=3.10
  - pytorch=2.0.*
  - torchvision=0.15.*
  - lightning=2.0.*
@@ -18,9 +18,12 @@ dependencies:
  - opencv
  - h5py
  - rich
+ - seaborn
  - pip
  - pip:
+    - setuptools<81
     - rootutils
     - pre-commit
     - ikpy
     - gdown==5.1.0
+    - rerun-sdk>=0.20

@@ -139,3 +139,5 @@ slurm/*
 outputs/*
 checkpoints/*
 artifacts/*
+outputs_sparsh/*
+.codex
